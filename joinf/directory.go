@@ -142,7 +142,6 @@ func (dir *Directory) Delete(s string) (string,error) {
 }
 func (dir *Directory) Insert(s, id string) error {
 	for i := int64(0) ; i<dir.F.Pages ; i++ {
-		println(i,dir.F.Pages)
 		l,_ := dir.load(i)
 		if len(l)>=MAXDIR { continue }
 		l = append(l,[]string{s,id})
