@@ -122,8 +122,10 @@ func (f *Resource) Dispose() {
 		if i<1 { break }
 		for i>0 {
 			f.Cache.RemoveOldest()
-			i++
+			i--
 		}
 	}
 }
+
+
 

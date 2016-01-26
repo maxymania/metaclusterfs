@@ -17,6 +17,7 @@
 package joinf
 
 import "github.com/maxymania/metaclusterfs/resource"
+import "github.com/maxymania/metaclusterfs/uidf"
 import "io"
 import "encoding/gob"
 import "bytes"
@@ -32,6 +33,16 @@ type FileMetadata struct{
 	FLength int64
 	/* Directory related */
 	Pages int64
+}
+
+func LoadMetaDirect(r uidf.IRepo,id string) (*FileMetadata,error) {
+	m,e := r.Open(id,"meta")
+	if e!=nil { return nil,e }
+	f := new(FileMetadata)
+	defer m.Close()
+	dec := gob.NewDecoder(io.NewSectionReader(m,0,MB64))
+	e = dec.Decode(f)
+	return f,e
 }
 
 func LoadMeta(r *resource.Resource) (*FileMetadata,error) {
@@ -124,9 +135,11 @@ type JoinFile struct{
 	F *FileMetadata
 	P *FileParts
 }
+
 func (j *JoinFile) Size() int64 {
 	return j.F.FLength
 }
+
 func (j *JoinFile) readSeg(p []byte, off int64) (n int, err error) {
 	index := off / MB64
 	offset := off % MB64
@@ -138,6 +151,7 @@ func (j *JoinFile) readSeg(p []byte, off int64) (n int, err error) {
 	if err==io.EOF { err = syscall.EIO }
 	return
 }
+
 func (j *JoinFile) ReadAt(p []byte, off int64) (n int, err error) {
 	end := off + int64(len(p))
 	if off>=j.F.FLength {
@@ -155,6 +169,7 @@ func (j *JoinFile) ReadAt(p []byte, off int64) (n int, err error) {
 	}
 	return
 }
+
 func (j *JoinFile) writeSeg(p []byte, off int64) (n int, err error) {
 	index := off / MB64
 	offset := off % MB64
@@ -166,6 +181,7 @@ func (j *JoinFile) writeSeg(p []byte, off int64) (n int, err error) {
 	if err==io.EOF { err = syscall.EIO }
 	return
 }
+
 func (j *JoinFile) WriteAt(p []byte, off int64) (n int, err error) {
 	N := len(p)
 	end := off + int64(len(p))
@@ -183,20 +199,30 @@ func (j *JoinFile) WriteAt(p []byte, off int64) (n int, err error) {
 	if n<N && err==nil { err = syscall.EIO }
 	return
 }
+
 func (j *JoinFile) grow(size int64) error {
 	start := j.P.Parts
-	//last := size / MB64
+	last := size / MB64
 	end := (size+MB64-1) / MB64
 	if end>start {
 		j.P.Parts = end
 		e := SaveParts(j.R,j.P)
 		if e!=nil { return e }
+		if start>0 { // Fill up the last block
+			part := strconv.FormatInt(start-1,10)
+			f,e := j.R.Open(part)
+			if e!=nil { return e }
+			f.Truncate(MB64)
+			f.Close()
+		}
 		for ; end>start ; start++ {
 			part := strconv.FormatInt(start,10)
 			f,e := j.R.Create(part)
 			if e!=nil { return e }
-			defer f.Close()
-			f.Truncate(MB64)
+			if start!=last {
+				f.Truncate(MB64)
+			}
+			f.Close()
 		}
 	}else if end<start {
 		for end<start {
@@ -209,9 +235,17 @@ func (j *JoinFile) grow(size int64) error {
 	}
 	return nil
 }
+
 func (j *JoinFile) Truncate(size int64) error {
 	e := j.grow(size)
 	if e!=nil { return e }
+	if (size % MB64)>0 { // adjust the size of the last block
+		part := strconv.FormatInt(size / MB64,10)
+		f,e := j.R.Create(part)
+		if e!=nil { return e }
+		f.Truncate(size % MB64)
+		f.Close()
+	}
 	j.F.FLength = size
 	return SaveMeta(j.R,j.F)
 }

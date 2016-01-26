@@ -153,5 +153,11 @@ func (dir *Directory) Insert(s, id string) error {
 	if e!=nil { return e }
 	return dir.save(dir.F.Pages-1,[][]string{[]string{s,id}})
 }
-
+func (dir *Directory) ListUp() (r [][]string) {
+	for i := int64(0) ; i<dir.F.Pages ; i++ {
+		l,_ := dir.load(i)
+		r = append(r,l...)
+	}
+	return
+}
 

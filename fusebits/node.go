@@ -14,6 +14,7 @@
    limitations under the License.
 */
 
+/* This Package is deprecated! */
 package fusebits
 
 import "github.com/hanwen/go-fuse/fuse"

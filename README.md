@@ -4,69 +4,61 @@ Meta Filesystem for Disk Clusters
 ```go
 package main
 
-import "fmt"
-import "github.com/satori/go.uuid"
-import "github.com/maxymania/metaclusterfs/uidf"
-import "github.com/maxymania/metaclusterfs/resource"
-import "github.com/maxymania/metaclusterfs/joinf"
-import _ "github.com/maxymania/metaclusterfs/lockman"
-import "github.com/maxymania/metaclusterfs/fusebits"
-import "github.com/hanwen/go-fuse/fuse/nodefs"
-import "flag"
+import (
+	"flag"
+	"fmt"
+	"os"
 
-var store uidf.IRepo
+	"github.com/hanwen/go-fuse/fuse"
+	"github.com/hanwen/go-fuse/fuse/nodefs"
+	"github.com/maxymania/metaclusterfs/filerepo"
+	"github.com/maxymania/metaclusterfs/fusebits2"
 
-var fs = new(fusebits.FSMan)
+	"github.com/maxymania/metaclusterfs/joinf"
+	"github.com/maxymania/metaclusterfs/uidf"
+	"github.com/maxymania/metaclusterfs/resource"
+	"github.com/satori/go.uuid"
+)
 
-func Res(s string) *resource.Resource {
-	return resource.NewResource(store,s)
-}
+const FOLDER = "/path/to/partition"
 
-func LDFunc(s string) interface{} {
-	r := Res(s)
-	f,e := joinf.LoadResource(r)
-	if e!=nil { return nil }
-	return f
-}
-
-func FreeFunc(i interface{}) {
-	switch v := i.(type) {
-	case *joinf.JoinFile:
-		v.R.Dispose()
-	case *joinf.Directory:
-		v.R.Dispose()
+func main() {
+	store := &uidf.FS{FOLDER}
+	{
+		res := resource.NewResource(store,uuid.Nil.String())
+    	joinf.CreateDir(res)
+	    res.Dispose()
 	}
-}
-
-const dr = "/path/to/partition"
-
-func garbage() {
-	fmt.Println()
-}
-
-func main(){
-	flag.Parse()
-	store = &uidf.FS{dr}
-	res := resource.NewResource(store,uuid.Nil.String())
-	joinf.CreateDir(res)
-	res.Dispose()
-
-
-	fs.Init()
-	fs.LD = LDFunc
-	fs.F = FreeFunc
-	fs.Dirs = Res
-	fs.Files = Res
-	rnode := fusebits.NewMNode(fs,uuid.Nil.String())
+	repo := new(filerepo.Repository)
+	repo.Repo = store
+	repo.Init()
 	
-	server,_,err := nodefs.MountRoot(flag.Arg(0),rnode, nil)
-	if err != nil {
-		fmt.Println("Mount fail:", err)
-		return
+	// Scans the arg list and sets up flags
+	debug := flag.Bool("debug", false, "print debugging messages.")
+	flag.Parse()
+	if flag.NArg() < 1 {
+		// TODO - where to get program name?
+		fmt.Println("usage: main MOUNTPOINT BACKING-PREFIX")
+		os.Exit(2)
 	}
-	server.SetDebug(true)
+
+	mountPoint := flag.Arg(0)
+	fmt.Println(mountPoint)
+	root := new(fusebits2.DirNode)
+	root.Init()
+	root.Dir = repo.GetDir(uuid.Nil.String())
+
+	conn := nodefs.NewFileSystemConnector(root, nil)
+	fmt.Println("OK! Get Ready Now!")
+	server, err := fuse.NewServer(conn.RawFS(), mountPoint, nil)
+	if err != nil {
+		fmt.Printf("Mount fail: %v\n", err)
+		os.Exit(1)
+	}
+	server.SetDebug(*debug)
+	fmt.Println("Mounted!")
 	server.Serve()
 }
-
-
 ```
+
+
