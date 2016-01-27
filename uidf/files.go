@@ -44,8 +44,19 @@ func (fs *FS) DeletePart(id,part string) error {
 	return os.Remove(fn)
 }
 func (fs *FS) Delete(id string) error {
-	dn := fs.of_id(id)
-	return os.RemoveAll(dn)
+	//dn := fs.of_id(id)
+	a,b,c,d := SplitFN(id)
+	an := fs.Prefix+"/"+a
+	bn := an+"/"+b
+	cn := bn+"/"+c
+	dn := cn+"/"+d
+	e := os.RemoveAll(dn)
+	if e==nil {
+		syscall.Rmdir(cn)
+		syscall.Rmdir(bn)
+		syscall.Rmdir(an)
+	}
+	return e
 }
 
 func (fs *FS) ListUp(id chan <- string,q *bool) {

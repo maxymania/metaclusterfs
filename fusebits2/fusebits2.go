@@ -108,10 +108,17 @@ func (b *DirNode) Rename(oldName string, newParent nodefs.Node, newName string, 
 	return fuse.ToStatus(e)
 }
 func (b *DirNode) Unlink(name string, context *fuse.Context) (code fuse.Status) {
-	e := b.Dir.Delete(name)
+	e := b.Dir.Delete(name,false)
 	if e!=nil { return fuse.ToStatus(e) }
 	b.Inode().RmChild(name)
 	return fuse.OK
 }
-
+func (b *DirNode) Rmdir(name string, context *fuse.Context) (code fuse.Status) {
+	e := b.Dir.IsChildEmpty(name)
+	if e!=nil { return fuse.ToStatus(e) }
+	e = b.Dir.Delete(name,true)
+	if e!=nil { return fuse.ToStatus(e) }
+	b.Inode().RmChild(name)
+	return fuse.OK
+}
 

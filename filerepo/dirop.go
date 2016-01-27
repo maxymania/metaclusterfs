@@ -53,6 +53,17 @@ func (d *Directory) Lookup(name string) (*Directory,*File,error) {
 	if e!=nil { return nil,nil,e }
 	return d.load(id)
 }
+func (d *Directory) IsEmpty() bool {
+	d.Obj.Lock()
+	defer d.Obj.Unlock()
+	r := d.Res.Dir.ListUp()
+	for _,p := range r {
+		_,e := joinf.LoadMetaDirect(d.Repo.Repo,p[1])
+		if e!=nil { continue }
+		return false
+	}
+	return true
+}
 func (d *Directory) Listup() []Entry {
 	d.Obj.Lock()
 	defer d.Obj.Unlock()
@@ -94,9 +105,33 @@ func (d *Directory) Rename(name, newName string) error{
 	_,e = d.Res.Dir.Rename(name,newName)
 	return e
 }
-func (d *Directory) Delete(name string) error{
+func (d *Directory) IsChildEmpty(name string) error {
+	sd,f,e := d.Lookup(name)
+	if e!=nil { return e }
+	if sd==nil {
+		f.Dispose()
+		return syscall.ENOTDIR
+	}
+	defer sd.Dispose()
+	if sd.IsEmpty() {
+		return nil
+	}
+	return syscall.ENOTEMPTY
+}
+func (d *Directory) Delete(name string,dir bool) error{
 	d.Obj.Lock()
 	defer d.Obj.Unlock()
+	{
+		id,e := d.Res.Dir.Find(name)
+		if e!=nil { return e }
+		fm,e := joinf.LoadMetaDirect(d.Repo.Repo,id)
+		if e!=nil { return e }
+		if fm.IsDir && !dir {
+			return syscall.ENOTDIR
+		}else if dir && !fm.IsDir {
+			return syscall.EISDIR
+		}
+	}
 	id,e := d.Res.Dir.Delete(name)
 	if e!=nil { return e }
 	obj := d.Repo.Load(id)
