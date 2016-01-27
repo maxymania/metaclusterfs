@@ -14,6 +14,9 @@
    limitations under the License.
 */
 
+/*
+ This package implements file and directory semantics ontop of uidf.
+ */
 package joinf
 
 import "github.com/maxymania/metaclusterfs/resource"

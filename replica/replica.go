@@ -14,6 +14,10 @@
    limitations under the License.
 */
 
+/*
+ Replica implements a replication mechanism for the uidf storage abstraction
+ layer.
+ */
 package replica
 
 import "github.com/maxymania/metaclusterfs/uidf"

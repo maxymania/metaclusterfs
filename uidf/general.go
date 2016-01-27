@@ -14,6 +14,9 @@
    limitations under the License.
 */
 
+/*
+ The basic storage abstraction layer interface.
+ */
 package uidf
 
 import "io"
