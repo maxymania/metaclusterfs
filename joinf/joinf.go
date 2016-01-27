@@ -166,7 +166,7 @@ func (j *JoinFile) ReadAt(p []byte, off int64) (n int, err error) {
 	}
 	n = len(p)
 	for len(p)>0 {
-		mark := (off - (off & MB64)) + MB64
+		mark := (off - (off % MB64)) + MB64
 		np,no := cutdown(&p,&off,mark)
 		_,err = j.readSeg(np,no)
 		if err!=nil { break }
@@ -195,7 +195,7 @@ func (j *JoinFile) WriteAt(p []byte, off int64) (n int, err error) {
 	}
 	n = len(p)
 	for len(p)>0 {
-		mark := (off - (off & MB64)) + MB64
+		mark := (off - (off % MB64)) + MB64
 		np,no := cutdown(&p,&off,mark)
 		_,err = j.writeSeg(np,no)
 		if err!=nil { break }
