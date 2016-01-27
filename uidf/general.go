@@ -28,6 +28,7 @@ type IRepoStat struct{
 	FreeUnits uint64
 }
 func (i *IRepoStat) Translate(unit int64) error {
+	if i.Unit==0||unit==0 { return translateError }
 	if i.Unit<unit {
 		if (unit%i.Unit)!=0 { return translateError }
 		n := unit/i.Unit
