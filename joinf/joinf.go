@@ -118,6 +118,10 @@ func CreateFile(r *resource.Resource) error {
 	return SaveParts(r,p)
 }
 
+/*
+ Loads an resource (file or directory) and returns a *JoinFile respectively a *Directory
+ structure.
+ */
 func LoadResource(r *resource.Resource) (interface{},error) {
 	f,e := LoadMeta(r)
 	if e!=nil { return nil,e }

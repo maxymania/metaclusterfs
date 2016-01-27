@@ -29,14 +29,21 @@ type ObjEntry struct{
 	Obj interface{}
 	rc uintptr
 }
+/*
+ Works like the Incr() method, but it does not invoke the synchronization.
+ */
 func (o *ObjEntry) IncrUns() {
 	o.rc++
 }
+
+// Reference count increment
 func (o *ObjEntry) Incr() {
 	o.l.Lock()
 	o.rc++
 	o.l.Unlock()
 }
+
+// Reference count decrement
 func (o *ObjEntry) Decr() {
 	o.l.Lock()
 	o.rc--
