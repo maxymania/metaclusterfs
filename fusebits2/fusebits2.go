@@ -101,4 +101,17 @@ func (b *DirNode) GetAttr(out *fuse.Attr, file nodefs.File, context *fuse.Contex
 	out.Mode = fuse.S_IFDIR | 0777
 	return fuse.OK
 }
+func (b *DirNode) Rename(oldName string, newParent nodefs.Node, newName string, context *fuse.Context) (code fuse.Status) {
+	if b!=newParent { return fuse.ENOSYS }
+	e := b.Dir.Rename(oldName,newName)
+	b.Inode().RmChild(oldName)
+	return fuse.ToStatus(e)
+}
+func (b *DirNode) Unlink(name string, context *fuse.Context) (code fuse.Status) {
+	e := b.Dir.Delete(name)
+	if e!=nil { return fuse.ToStatus(e) }
+	b.Inode().RmChild(name)
+	return fuse.OK
+}
+
 

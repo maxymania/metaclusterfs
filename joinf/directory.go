@@ -159,4 +159,26 @@ func (dir *Directory) ListUp() (r [][]string) {
 	}
 	return
 }
+func (dir *Directory) rename(i int64,s ,n string) (string,error) {
+	l,e := dir.load(i)
+	if e!=nil { return "",e }
+	for _,row := range l {
+		if len(row)<2 { continue }
+		if row[0]==s {
+			row[0]=n // set new name
+			dir.save(i,l)
+			return row[1],nil
+		}
+	}
+	return "",nil
+}
+func (dir *Directory) Rename(s, n string) (string,error) {
+	for i := int64(0) ; i<dir.F.Pages ; i++ {
+		s,e := dir.rename(i,s,n)
+		if e!=nil { return "",e }
+		if s!="" { return s,nil }
+	}
+	return "",syscall.ENOENT
+}
+
 

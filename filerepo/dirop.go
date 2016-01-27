@@ -86,6 +86,24 @@ func (d *Directory) Create(name string,dir bool) (*Directory,*File,error) {
 	}
 	return d.load(id)
 }
-
+func (d *Directory) Rename(name, newName string) error{
+	d.Obj.Lock()
+	defer d.Obj.Unlock()
+	_,e := d.Res.Dir.Find(newName)
+	if e==nil { return syscall.EEXIST }
+	_,e = d.Res.Dir.Rename(name,newName)
+	return e
+}
+func (d *Directory) Delete(name string) error{
+	d.Obj.Lock()
+	defer d.Obj.Unlock()
+	id,e := d.Res.Dir.Delete(name)
+	if e!=nil { return e }
+	obj := d.Repo.Load(id)
+	lr := obj.Obj.(*LocalRes)
+	lr.Res.Delete()
+	obj.Decr()
+	return nil
+}
 
 
