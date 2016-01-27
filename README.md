@@ -18,12 +18,20 @@ import (
 	"github.com/maxymania/metaclusterfs/uidf"
 	"github.com/maxymania/metaclusterfs/resource"
 	"github.com/satori/go.uuid"
+
+	"github.com/maxymania/metaclusterfs/replica"
 )
 
 const FOLDER = "/path/to/partition"
 
 func main() {
-	store := &uidf.FS{FOLDER}
+	//store := &uidf.FS{FOLDER}
+	//store := &uidf.FS{FOLDER}
+	store := replica.NewMultiRepo([]uidf.IRepo{
+			&uidf.FS{FOLDER+"1"},
+			&uidf.FS{FOLDER+"2"},
+			&uidf.FS{FOLDER+"3"},
+		},1<<12,2)
 	{
 		res := resource.NewResource(store,uuid.Nil.String())
     	joinf.CreateDir(res)
