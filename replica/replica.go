@@ -91,13 +91,16 @@ func (m *multiRepo) isort() {
 
 
 func (m *multiRepo) Open(id, part string) (uidf.IFile, error) {
+	j := 0
 	mf := new(multiFile)
 	mf.files = make([]uidf.IFile,0,m.quorum)
 	for _,rle := range m.list {
-		f,e := rle.repo.Create(id,part)
+		f,e := rle.repo.Open(id,part)
 		if e!=nil { continue }
 		mf.files = append(mf.files,f)
+		j++
 	}
+	if j==0 { return nil, syscall.EIO }
 	mf.onOpen()
 	return mf,nil
 }
@@ -108,11 +111,23 @@ func (m *multiRepo) Create(id, part string) (uidf.IFile, error) {
 	j := 0
 	mf := new(multiFile)
 	mf.files = make([]uidf.IFile,0,m.quorum)
+	opened := make(map[int]bool)
 	err := error(syscall.EIO)
-	for _,rle := range m.list {
+	for i,rle := range m.list {
+		if j==m.quorum { break } // quorum reached
+		f,e := rle.repo.Open(id,part)
+		if e!=nil { err = e; continue }
+		opened[i] = true
+		mf.files = append(mf.files,f)
+		j++
+	}
+	mustrepl := j>0
+	for i,rle := range m.list {
+		if opened[i] { continue }
 		if j==m.quorum { break } // quorum reached
 		f,e := rle.repo.Create(id,part)
 		if e!=nil { err = e; continue }
+		if mustrepl { replicate(f,mf) }
 		mf.files = append(mf.files,f)
 		j++
 	}
